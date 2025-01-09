@@ -17,10 +17,18 @@ from Execution_Graph.Nodes.response_generation import ResponseGeneration
 from Execution_Graph.Nodes.fallback import Fallback
 from Execution_Graph.Nodes.user_satisfaction import UserSatisfaction
 from Execution_Graph.Nodes.activity_suggestor import ActivitySuggestor
+from Execution_Graph.Nodes.user_response_analyser import UserResponseAnalyser
+from Execution_Graph.Nodes.feedback_decider import FeedbackDecider
+from Execution_Graph.Nodes.activity_decider import ActivityDecider
+from Execution_Graph.Nodes.joke_generator import JokeGenerator
+from Execution_Graph.Nodes.motivation_generator import MotivationGenerator
 from Execution_Graph.Edge_Conditions.choosing_route import RouteChoosing
 from Execution_Graph.Edge_Conditions.user_evaluation import UserEvaluation
 from Execution_Graph.Edge_Conditions.choosing_context import ContextChooser
 from Execution_Graph.Edge_Conditions.choosing_problem import ProblemChooser
+from Execution_Graph.Edge_Conditions.analyzing_user_satisfaction import AnalyzingUserSatisfaction
+from Execution_Graph.Edge_Conditions.analyzing_user_response import AnalyzingUserResponse
+from Execution_Graph.Edge_Conditions.analysing_feedback import FeedbackAnalyzer
 from Execution_Graph.Edge_Conditions.choosing_activity import ActivityChooser
 
 from retriever import Retriever
@@ -48,7 +56,13 @@ graph.add_node("generation",ResponseGeneration)
 graph.add_node("fallback",Fallback)
 graph.add_node("user_satisfaction",UserSatisfaction)
 graph.add_node("activity_suggestor",ActivitySuggestor)
+graph.add_node("user_response_analyzer",UserResponseAnalyser)
+graph.add_node("feedback_analyzer",FeedbackDecider)
+graph.add_node("activity_decider",ActivityDecider)
+graph.add_node("joke_generator",JokeGenerator)
+graph.add_node("motivation_generator",MotivationGenerator)
 graph.set_entry_point("route_decider")
+
 
 #Edges:
 graph.add_edge(START,"route_decider")
@@ -57,11 +71,43 @@ graph.add_conditional_edges(
     "route_decider",
     RouteChoosing,
     {
-        "answering_query_route":"problem_finder",
-        "activity_route":END
+        "asking_question":"problem_finder",
+        "answering_asked_question":"user_response_analyzer"
     }
 
 )
+graph.add_conditional_edges(
+    "user_response_analyzer",
+    AnalyzingUserResponse,
+    {
+        "asking_for_activity":"activity_decider",
+        "giving_feedback":"feedback_analyzer",
+        "general_query":"fallback"
+    }
+)
+
+graph.add_conditional_edges(
+    "activity_decider",
+    ActivityChooser,
+    {
+        "joke":"joke_generator",
+        "motivation":"motivation_generator",
+        "fun_game":END
+    }
+)
+
+graph.add_edge("joke_generator",END)
+graph.add_edge("motivation_generator",END)
+
+graph.add_conditional_edges(
+    "feedback_analyzer",
+    FeedbackAnalyzer,
+    {
+        "satisfied":"fallback",
+        "not_satisfied":END
+    }
+)
+
 graph.add_conditional_edges(
     "problem_finder",
     ProblemChooser,
@@ -96,7 +142,7 @@ graph.add_conditional_edges(
 
 graph.add_conditional_edges(
     "user_satisfaction",
-    ActivityChooser,
+    AnalyzingUserSatisfaction,
     {
         "yes":END,
         "no":"activity_suggestor"
@@ -126,34 +172,34 @@ except Exception as e:
     print(e)
 
 
-urls=LoadDataSource(filepath="web_urls.txt")
-retriever=Retriever(urls)
-ind=1
-thread_id=1
-
-while True:
-    user_response=input("User:")
-
-    if ind%4==0:
-        thread_id+=1
-
-    config = {"configurable": {"thread_id": thread_id}}
-    inputs={"key":{
-        "user_response":user_response,
-        "retriever":retriever
-    },
-    "history":[("user",user_response)],
-    "num_questions_asked":ind
-    }
-    ind+=1
-
-    for output in app.stream(inputs,config,stream_mode="values"):
-        for key,value in output.items():
-            if key in ["generation","fallback"]:
-                print(f"AI:{value['key']['ai_response']}")
-
-            if key=="activity_suggestor":
-                print(f"AI:{value['key']['activity_suggestor']}")
-
-            time.sleep(3)
-
+# urls=LoadDataSource(filepath="web_urls.txt")
+# retriever=Retriever(urls)
+# ind=1
+# thread_id=1
+#
+# while True:
+#     user_response=input("User:")
+#
+#     if ind%4==0:
+#         thread_id+=1
+#
+#     config = {"configurable": {"thread_id": thread_id}}
+#     inputs={"key":{
+#         "user_response":user_response,
+#         "retriever":retriever
+#     },
+#     "history":[("user",user_response)],
+#     "num_questions_asked":ind
+#     }
+#     ind+=1
+#
+#     for output in app.stream(inputs,config,stream_mode="values"):
+#         for key,value in output.items():
+#             if key in ["generation","fallback"]:
+#                 print(f"AI:{value['key']['ai_response']}")
+#
+#             if key=="activity_suggestor":
+#                 print(f"AI:{value['key']['activity_suggestor']}")
+#
+#             time.sleep(3)
+#

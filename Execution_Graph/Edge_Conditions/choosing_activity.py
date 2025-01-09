@@ -1,8 +1,11 @@
 def ActivityChooser(state):
-    user_sat=state["key"]["user_satisfaction"]
+    activity_decider=state["key"]["activity_decider"]
 
-    if user_sat=="Yes":
-        return "yes"
+    if activity_decider=="Joke":
+        return "joke"
+
+    elif activity_decider=="Motivation":
+        return "motivation"
 
     else:
-        return "no"
+        return "fun_game"

@@ -2,7 +2,7 @@ def RouteChoosing(state):
     user_response_type=state["key"]["user_response_type"]
 
     if user_response_type=="Question":
-        return "answering_query_route"
+        return "asking_question"
 
     else:
-        return "activity_route"
+        return "answering_asked_question"
