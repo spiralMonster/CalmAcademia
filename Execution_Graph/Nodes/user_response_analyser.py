@@ -16,10 +16,7 @@ def UserResponseAnalyser(state):
     ).with_structured_output(UserResponseAnalyserSpecs)
 
     sys_msg="""
-    Given the user response decide whether it is about:
-     - asking for an activity
-     - giving feedback to performed activity
-     - any other response
+    Depending upon the user response decide whether the user want to perform the activity or not.
     """
     prompt=ChatPromptTemplate.from_messages(
         [

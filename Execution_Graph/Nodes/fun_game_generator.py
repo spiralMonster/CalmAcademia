@@ -6,7 +6,7 @@ from langchain_core.output_parsers import StrOutputParser
 load_dotenv()
 
 def FunGameGenerator(state):
-    problem=state["key"]["problem"]
+    problem=state["key"]["user_problem"]
     llm = ChatGoogleGenerativeAI(
         model="gemini-1.5-pro",
         temperature=0,

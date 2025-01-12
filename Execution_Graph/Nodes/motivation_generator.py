@@ -8,7 +8,7 @@ load_dotenv()
 
 
 def MotivationGenerator(state):
-    problem=state["key"]["problem"]
+    problem=state["key"]["user_problem"]
 
     llm=ChatGoogleGenerativeAI(
         model="gemini-1.5-pro",

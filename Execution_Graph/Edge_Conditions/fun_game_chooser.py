@@ -7,5 +7,3 @@ def FunGameChooser(state):
     elif fun_game_type=="I_spy":
         return "I_spy"
 
-    else:
-        return "Never_have_I_ever"

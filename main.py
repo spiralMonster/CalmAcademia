@@ -6,7 +6,6 @@ from typing import Annotated
 from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph,START,END
-from Execution_Graph.Nodes.route_decider import RouteDecider
 from Execution_Graph.Nodes.problem_finder import ProblemFinder
 from Execution_Graph.Nodes.context_decider import ContextDecider
 from Execution_Graph.Nodes.context_using_vectorstore import ContextUsingVectorStore
@@ -15,10 +14,9 @@ from Execution_Graph.Nodes.transform_query_vectorstore import QueryTransformatio
 from Execution_Graph.Nodes.web_search import WebSearch
 from Execution_Graph.Nodes.response_generation import ResponseGeneration
 from Execution_Graph.Nodes.fallback import Fallback
-from Execution_Graph.Nodes.user_satisfaction import UserSatisfaction
+from Execution_Graph.Nodes.helping_user_by import HelpingUserBy
 from Execution_Graph.Nodes.activity_suggestor import ActivitySuggestor
 from Execution_Graph.Nodes.user_response_analyser import UserResponseAnalyser
-from Execution_Graph.Nodes.feedback_decider import FeedbackDecider
 from Execution_Graph.Nodes.activity_decider import ActivityDecider
 from Execution_Graph.Nodes.joke_generator import JokeGenerator
 from Execution_Graph.Nodes.motivation_generator import MotivationGenerator
@@ -33,13 +31,12 @@ from Execution_Graph.Nodes.i_spy_manager import ISpyManger
 from Execution_Graph.Nodes.i_spy_replayer import ISpyReplayer
 from Execution_Graph.Nodes.i_spy_replayer_decider import ISpyReplayerDecider
 from Execution_Graph.Nodes.analysing_user_response_in_fun_game import AnalyzingUserResponseDuringGame
-from Execution_Graph.Edge_Conditions.choosing_route import RouteChoosing
-from Execution_Graph.Edge_Conditions.user_evaluation import UserEvaluation
+from Execution_Graph.Nodes.service_initiator import ServiceInitiator
+from Execution_Graph.Edge_Conditions.choosing_help import ChoosingHelp
+from Execution_Graph.Edge_Conditions.evaluating_user import EvaluatingUser
 from Execution_Graph.Edge_Conditions.choosing_context import ContextChooser
 from Execution_Graph.Edge_Conditions.choosing_problem import ProblemChooser
-from Execution_Graph.Edge_Conditions.analyzing_user_satisfaction import AnalyzingUserSatisfaction
 from Execution_Graph.Edge_Conditions.analyzing_user_response import AnalyzingUserResponse
-from Execution_Graph.Edge_Conditions.analysing_feedback import FeedbackAnalyzer
 from Execution_Graph.Edge_Conditions.choosing_activity import ActivityChooser
 from Execution_Graph.Edge_Conditions.deciding_flow_of_CalmAcademia import DecidingFlowOfCalmAcademia
 from Execution_Graph.Edge_Conditions.deciding_to_exit_continue_fun_game import ExitOrContinueFunGame
@@ -62,7 +59,7 @@ class GraphState(TypedDict):
 graph=StateGraph(GraphState)
 
 #Nodes:
-graph.add_node("route_decider",RouteDecider)
+
 graph.add_node("problem_finder",ProblemFinder)
 graph.add_node("context_decider",ContextDecider)
 graph.add_node("context_from_vectorstore",ContextUsingVectorStore)
@@ -71,10 +68,9 @@ graph.add_node("transform_query_vectorstore",QueryTransformationForVectorStore)
 graph.add_node("web_search",WebSearch)
 graph.add_node("generation",ResponseGeneration)
 graph.add_node("fallback",Fallback)
-graph.add_node("user_satisfaction",UserSatisfaction)
+graph.add_node("helping_user_by",HelpingUserBy)
 graph.add_node("activity_suggestor",ActivitySuggestor)
 graph.add_node("user_response_analyzer",UserResponseAnalyser)
-graph.add_node("feedback_analyzer",FeedbackDecider)
 graph.add_node("activity_decider",ActivityDecider)
 graph.add_node("joke_generator",JokeGenerator)
 graph.add_node("motivation_generator",MotivationGenerator)
@@ -89,29 +85,32 @@ graph.add_node("i_spy_manager",ISpyManger)
 graph.add_node("analyzing_user_response_during_game",AnalyzingUserResponseDuringGame)
 graph.add_node("i_spy_replayer",ISpyReplayer)
 graph.add_node("i_spy_replay_decider",ISpyReplayerDecider)
-# graph.set_entry_point("route_decider")
+graph.add_node("service_initiator",ServiceInitiator)
 
 
 #Edges:
-# graph.add_edge(START,"route_decider")
+
 
 graph.add_conditional_edges(
     START,
     DecidingFlowOfCalmAcademia,
     {
         "fun_game_initializer":"fun_game_decider",
-        "normal_routine":"route_decider",
+        "starting_activity":"user_response_analyzer",
+        "query_answering":"problem_finder",
         "managing_fun_game":"fun_game_manager",
         "deciding_replaying_i_spy":"i_spy_replay_decider"
     }
 )
+
+
 
 graph.add_conditional_edges(
     "i_spy_replay_decider",
     DecidingReplayISpy,
     {
       "replaying_i_spy":"i_spy_word_generator",
-      "not_replaying_i_spy":END
+      "not_replaying_i_spy":"service_initiator"
     }
 )
 
@@ -121,7 +120,7 @@ graph.add_conditional_edges(
     {
         "continuing_to_I_spy_game":"i_spy_manager",
         "continuing_to_other_games":"analyzing_user_response_during_game",
-        "exit":END
+        "exit":"service_initiator"
     }
 
 )
@@ -141,8 +140,7 @@ graph.add_conditional_edges(
     FunGameCycle,
     {
         "would_you_rather_cycle":"would_you_rather_question_generator",
-        "i_spy_cycle":"i_spy_question_generator",
-        "never_have_i_ever_cycle":END
+        "i_spy_cycle":"i_spy_question_generator"
 
     }
 )
@@ -152,8 +150,7 @@ graph.add_conditional_edges(
     FunGameChooser,
     {
         "Would_you_rather":"would_you_rather_question_generator",
-        "I_spy":"i_spy_word_generator",
-        "Never_have_I_ever":END
+        "I_spy":"i_spy_word_generator"
     }
 )
 
@@ -162,22 +159,13 @@ graph.add_edge("i_spy_question_generator",END)
 
 graph.add_edge("would_you_rather_question_generator",END)
 
-graph.add_conditional_edges(
-    "route_decider",
-    RouteChoosing,
-    {
-        "asking_question":"problem_finder",
-        "answering_asked_question":"user_response_analyzer"
-    }
 
-)
 graph.add_conditional_edges(
     "user_response_analyzer",
     AnalyzingUserResponse,
     {
         "asking_for_activity":"activity_decider",
-        "giving_feedback":"feedback_analyzer",
-        "general_response":"fallback"
+        "no_activity":"service_initiator"
     }
 )
 
@@ -191,20 +179,12 @@ graph.add_conditional_edges(
     }
 )
 
+graph.add_edge("joke_generator","service_initiator")
+graph.add_edge("motivation_generator","service_initiator")
 graph.add_edge("fun_game_generator",END)
-graph.add_edge("joke_generator",END)
-graph.add_edge("motivation_generator",END)
 
-graph.add_conditional_edges(
-    "feedback_analyzer",
-    FeedbackAnalyzer,
-    {
-        "satisfied":"fallback",
-        "not_satisfied":"external_help"
-    }
-)
 
-graph.add_edge("external_help",END)
+graph.add_edge("external_help","service_initiator")
 
 graph.add_conditional_edges(
     "problem_finder",
@@ -231,26 +211,27 @@ graph.add_edge("context_from_vectorstore","generation")
 
 graph.add_conditional_edges(
     "generation",
-    UserEvaluation,
+    EvaluatingUser,
     {
-        "user_evaluation":"user_satisfaction",
+        "user_evaluation":"helping_user_by",
         "end":END
     }
 )
 
 graph.add_conditional_edges(
-    "user_satisfaction",
-    AnalyzingUserSatisfaction,
+    "helping_user_by",
+    ChoosingHelp,
     {
-        "yes":END,
-        "no":"activity_suggestor"
+        "activity":"activity_suggestor",
+        "external_help":"external_help",
+        "No_help_needed":END
     }
 )
 
 
-
 graph.add_edge("activity_suggestor",END)
 graph.add_edge("fallback",END)
+graph.add_edge("service_initiator",END)
 
 #Memory:
 memory=MemorySaver()
@@ -283,37 +264,54 @@ fun_game_type=None
 fun_game_question=None
 fun_game_phase=False
 i_spy_replayer=False
+activity_phase=False
+interactions=[]
+problem=None
 while True:
     user_response=input("User:")
 
-    if ind%4==0:
+    if ind%7==0:
         thread_id+=1
+        interactions=[]
 
     config = {"configurable": {"thread_id": thread_id}}
     inputs={"key":{
         "user_response":user_response,
         "retriever":retriever,
+        "user_problem":problem,
         "fun_game_initializer":fun_game_initializer,
+        "activity_phase":activity_phase,
         "fun_game_phase":fun_game_phase,
         "i_spy_replayer":i_spy_replayer,
         "fun_game":{
             'type':fun_game_type,
             'question':fun_game_question
-        }
+        },
+        "interaction":interactions
     },
     "history":[("user",user_response)],
     "num_questions_asked":ind
     }
-    ind+=1
+
 
     for output in app.stream(inputs,config,stream_mode="values"):
         for key,value in output.items():
-            if key in ["generation","fallback","activity_suggestor","joke_generator","motivation_generator","external_help","i_spy_replayer"]:
+            if key in ["generation","fallback"]:
+                interactions.append(value["key"]["history"])
+                problem=value["key"]["problem"]
+                ind+=1
+
+            if key in ["generation","fallback","activity_suggestor","joke_generator","motivation_generator","external_help","i_spy_replayer","service_initiator"]:
                 print(f"AI:{value['key']['ai_response']}")
+
+
+            if key=="activity_suggestor":
+                activity_phase=True
 
             if key=="fun_game_generator":
                 print(f"AI:{value['key']['fun_game_generator']}")
                 fun_game_initializer=True
+                activity_phase=False
 
             if key=="fun_game_manager":
                 fun_game_state=value["key"]["fun_game_state"]
