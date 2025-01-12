@@ -47,7 +47,7 @@ def JokeGenerator(state):
         'reference_jokes':reference_jokes
     })
 
-    state["key"]["joke"]=joke
+    state["key"]["ai_response"]=joke
     return state
 
 

@@ -22,6 +22,17 @@ from Execution_Graph.Nodes.feedback_decider import FeedbackDecider
 from Execution_Graph.Nodes.activity_decider import ActivityDecider
 from Execution_Graph.Nodes.joke_generator import JokeGenerator
 from Execution_Graph.Nodes.motivation_generator import MotivationGenerator
+from Execution_Graph.Nodes.fun_game_generator import FunGameGenerator
+from Execution_Graph.Nodes.fun_game_decider import FunGameDecider
+from Execution_Graph.Nodes.providing_external_help import ExternalHelp
+from Execution_Graph.Nodes.fun_game_manager import FunGameManager
+from Execution_Graph.Nodes.would_you_rather_fun_game_question_asking import WouldYouRatherFunGameQuestionAsking
+from Execution_Graph.Nodes.i_spy_word_generator import ISpyWordGenerator
+from Execution_Graph.Nodes.i_spy_question_generator import ISpyQuestionGenerator
+from Execution_Graph.Nodes.i_spy_manager import ISpyManger
+from Execution_Graph.Nodes.i_spy_replayer import ISpyReplayer
+from Execution_Graph.Nodes.i_spy_replayer_decider import ISpyReplayerDecider
+from Execution_Graph.Nodes.analysing_user_response_in_fun_game import AnalyzingUserResponseDuringGame
 from Execution_Graph.Edge_Conditions.choosing_route import RouteChoosing
 from Execution_Graph.Edge_Conditions.user_evaluation import UserEvaluation
 from Execution_Graph.Edge_Conditions.choosing_context import ContextChooser
@@ -30,6 +41,12 @@ from Execution_Graph.Edge_Conditions.analyzing_user_satisfaction import Analyzin
 from Execution_Graph.Edge_Conditions.analyzing_user_response import AnalyzingUserResponse
 from Execution_Graph.Edge_Conditions.analysing_feedback import FeedbackAnalyzer
 from Execution_Graph.Edge_Conditions.choosing_activity import ActivityChooser
+from Execution_Graph.Edge_Conditions.deciding_flow_of_CalmAcademia import DecidingFlowOfCalmAcademia
+from Execution_Graph.Edge_Conditions.deciding_to_exit_continue_fun_game import ExitOrContinueFunGame
+from Execution_Graph.Edge_Conditions.fun_game_chooser import FunGameChooser
+from Execution_Graph.Edge_Conditions.fun_game_cycle import FunGameCycle
+from Execution_Graph.Edge_Conditions.deciding_flow_of_i_spy import DecidingFlowOfISpy
+from Execution_Graph.Edge_Conditions.deciding_replay_i_spy import DecidingReplayISpy
 
 from retriever import Retriever
 from load_data_source import LoadDataSource
@@ -61,11 +78,89 @@ graph.add_node("feedback_analyzer",FeedbackDecider)
 graph.add_node("activity_decider",ActivityDecider)
 graph.add_node("joke_generator",JokeGenerator)
 graph.add_node("motivation_generator",MotivationGenerator)
-graph.set_entry_point("route_decider")
+graph.add_node("external_help",ExternalHelp)
+graph.add_node("fun_game_generator",FunGameGenerator)
+graph.add_node("fun_game_decider",FunGameDecider)
+graph.add_node("fun_game_manager",FunGameManager)
+graph.add_node("would_you_rather_question_generator",WouldYouRatherFunGameQuestionAsking)
+graph.add_node("i_spy_word_generator",ISpyWordGenerator)
+graph.add_node("i_spy_question_generator",ISpyQuestionGenerator)
+graph.add_node("i_spy_manager",ISpyManger)
+graph.add_node("analyzing_user_response_during_game",AnalyzingUserResponseDuringGame)
+graph.add_node("i_spy_replayer",ISpyReplayer)
+graph.add_node("i_spy_replay_decider",ISpyReplayerDecider)
+# graph.set_entry_point("route_decider")
 
 
 #Edges:
-graph.add_edge(START,"route_decider")
+# graph.add_edge(START,"route_decider")
+
+graph.add_conditional_edges(
+    START,
+    DecidingFlowOfCalmAcademia,
+    {
+        "fun_game_initializer":"fun_game_decider",
+        "normal_routine":"route_decider",
+        "managing_fun_game":"fun_game_manager",
+        "deciding_replaying_i_spy":"i_spy_replay_decider"
+    }
+)
+
+graph.add_conditional_edges(
+    "i_spy_replay_decider",
+    DecidingReplayISpy,
+    {
+      "replaying_i_spy":"i_spy_word_generator",
+      "not_replaying_i_spy":END
+    }
+)
+
+graph.add_conditional_edges(
+    "fun_game_manager",
+    ExitOrContinueFunGame,
+    {
+        "continuing_to_I_spy_game":"i_spy_manager",
+        "continuing_to_other_games":"analyzing_user_response_during_game",
+        "exit":END
+    }
+
+)
+
+graph.add_conditional_edges(
+    "i_spy_manager",
+    DecidingFlowOfISpy,
+    {
+        "word_guessed":"i_spy_replayer",
+        "word_not_guessed":"analyzing_user_response_during_game"
+    }
+)
+graph.add_edge("i_spy_replayer",END)
+
+graph.add_conditional_edges(
+    "analyzing_user_response_during_game",
+    FunGameCycle,
+    {
+        "would_you_rather_cycle":"would_you_rather_question_generator",
+        "i_spy_cycle":"i_spy_question_generator",
+        "never_have_i_ever_cycle":END
+
+    }
+)
+
+graph.add_conditional_edges(
+    "fun_game_decider",
+    FunGameChooser,
+    {
+        "Would_you_rather":"would_you_rather_question_generator",
+        "I_spy":"i_spy_word_generator",
+        "Never_have_I_ever":END
+    }
+)
+
+graph.add_edge("i_spy_word_generator","i_spy_question_generator")
+graph.add_edge("i_spy_question_generator",END)
+
+graph.add_edge("would_you_rather_question_generator",END)
 
 graph.add_conditional_edges(
     "route_decider",
@@ -82,7 +177,7 @@ graph.add_conditional_edges(
     {
         "asking_for_activity":"activity_decider",
         "giving_feedback":"feedback_analyzer",
-        "general_query":"fallback"
+        "general_response":"fallback"
     }
 )
 
@@ -92,10 +187,11 @@ graph.add_conditional_edges(
     {
         "joke":"joke_generator",
         "motivation":"motivation_generator",
-        "fun_game":END
+        "fun_game":"fun_game_generator"
     }
 )
 
+graph.add_edge("fun_game_generator",END)
 graph.add_edge("joke_generator",END)
 graph.add_edge("motivation_generator",END)
 
@@ -104,9 +200,11 @@ graph.add_conditional_edges(
     FeedbackAnalyzer,
     {
         "satisfied":"fallback",
-        "not_satisfied":END
+        "not_satisfied":"external_help"
     }
 )
+
+graph.add_edge("external_help",END)
 
 graph.add_conditional_edges(
     "problem_finder",
@@ -148,6 +246,9 @@ graph.add_conditional_edges(
         "no":"activity_suggestor"
     }
 )
+
+
+
 graph.add_edge("activity_suggestor",END)
 graph.add_edge("fallback",END)
 
@@ -172,34 +273,83 @@ except Exception as e:
     print(e)
 
 
-# urls=LoadDataSource(filepath="web_urls.txt")
-# retriever=Retriever(urls)
-# ind=1
-# thread_id=1
-#
-# while True:
-#     user_response=input("User:")
-#
-#     if ind%4==0:
-#         thread_id+=1
-#
-#     config = {"configurable": {"thread_id": thread_id}}
-#     inputs={"key":{
-#         "user_response":user_response,
-#         "retriever":retriever
-#     },
-#     "history":[("user",user_response)],
-#     "num_questions_asked":ind
-#     }
-#     ind+=1
-#
-#     for output in app.stream(inputs,config,stream_mode="values"):
-#         for key,value in output.items():
-#             if key in ["generation","fallback"]:
-#                 print(f"AI:{value['key']['ai_response']}")
-#
-#             if key=="activity_suggestor":
-#                 print(f"AI:{value['key']['activity_suggestor']}")
-#
-#             time.sleep(3)
-#
+urls=LoadDataSource(filepath="web_urls.txt")
+retriever=Retriever(urls)
+ind=1
+thread_id=1
+
+fun_game_initializer=False
+fun_game_type=None
+fun_game_question=None
+fun_game_phase=False
+i_spy_replayer=False
+while True:
+    user_response=input("User:")
+
+    if ind%4==0:
+        thread_id+=1
+
+    config = {"configurable": {"thread_id": thread_id}}
+    inputs={"key":{
+        "user_response":user_response,
+        "retriever":retriever,
+        "fun_game_initializer":fun_game_initializer,
+        "fun_game_phase":fun_game_phase,
+        "i_spy_replayer":i_spy_replayer,
+        "fun_game":{
+            'type':fun_game_type,
+            'question':fun_game_question
+        }
+    },
+    "history":[("user",user_response)],
+    "num_questions_asked":ind
+    }
+    ind+=1
+
+    for output in app.stream(inputs,config,stream_mode="values"):
+        for key,value in output.items():
+            if key in ["generation","fallback","activity_suggestor","joke_generator","motivation_generator","external_help","i_spy_replayer"]:
+                print(f"AI:{value['key']['ai_response']}")
+
+            if key=="fun_game_generator":
+                print(f"AI:{value['key']['fun_game_generator']}")
+                fun_game_initializer=True
+
+            if key=="fun_game_manager":
+                fun_game_state=value["key"]["fun_game_state"]
+                if fun_game_state=="Exit":
+                    fun_game_phase=False
+
+            if key=="i_spy_manager":
+                user_answer=value["key"]["i_spy_user_answer"]
+                if user_answer=="guessed":
+                    i_spy_replayer=True
+
+            if key=="i_spy_replay_decider":
+                decider=value["key"]["i_spy_replay_decider"]
+                if decider=="not_replay":
+                    i_spy_replayer=False
+
+            if key=="would_you_rather_question_generator":
+                fun_game_initializer=False
+                fun_game_phase=True
+                fun_game_type="Would_you_rather"
+                fun_game_question=value["key"]["would_you_rather_question"]
+                print(f"AI:{value['key']['would_you_rather_question']}")
+
+            elif key=="i_spy_question_generator":
+                fun_game_initializer=False
+                fun_game_phase=True
+                fun_game_type="I_spy"
+                word=value["key"]["i_spy_word"]
+                asked_question=value["key"]["i_spy_question"]
+                question=f"""
+                The word to be guessed is: {word}.
+                And the asked question is: {asked_question}
+                         """
+                fun_game_question=question
+                print(f"AI:{asked_question}")
+
+
+            time.sleep(3)
+

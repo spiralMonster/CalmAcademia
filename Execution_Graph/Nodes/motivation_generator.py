@@ -47,7 +47,7 @@ def MotivationGenerator(state):
         'reference_jokes':reference_motivation
     })
 
-    state["key"]["motivation"]=motivation
+    state["key"]["ai_response"]=motivation
     return state
 
 

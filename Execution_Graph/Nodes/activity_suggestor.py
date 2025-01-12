@@ -28,7 +28,7 @@ def ActivitySuggestor(state):
     activity_suggestor_chain=prompt|llm|StrOutputParser()
     activity_suggestor=activity_suggestor_chain.invoke({'problem':problem})
 
-    state["key"]["activity_suggestor"]=activity_suggestor
+    state["key"]["ai_response"]=activity_suggestor
     return state
 
 
