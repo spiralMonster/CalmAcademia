@@ -29,5 +29,8 @@
    ```
 3. Run the chatbot:
    ```bash
-   python3 main.py
+   streamlit run main.py
    ```
+
+### Screenshots:
+![](screenshot1.png)
