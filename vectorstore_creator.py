@@ -1,22 +1,22 @@
 import os
 import re
 from dotenv import load_dotenv
-from langchain.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import WebBaseLoader
 from langchain_google_genai.embeddings import GoogleGenerativeAIEmbeddings
 load_dotenv()
 
-def Retriever(urls,num_results=2,vectorstore_dir_path="VectorStore"):
+def VectorStoreCreator(urls,num_results=2,vectorstore_dir_path="VectorStore"):
     print("Creating Retriever")
     embedding_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001",
                                                    api_key=os.environ['GOOGLE_GEMINI_API_KEY'])
     if os.path.exists(vectorstore_dir_path):
         print("Using Created Vectorstore")
-        vectorstore=Chroma(
-            persist_directory=vectorstore_dir_path,
-            embedding_function=embedding_model
-        )
+        # vectorstore=Chroma(
+        #     persist_directory=vectorstore_dir_path,
+        #     embedding_function=embedding_model
+        # )
 
     else:
         print("Creating Vectorstore")
@@ -42,9 +42,10 @@ def Retriever(urls,num_results=2,vectorstore_dir_path="VectorStore"):
         vectorstore.persist()
 
 
-    retriever = vectorstore.as_retriever(search_type="mmr",search_kwargs={"k":num_results})
-    print("Retriever Created..")
-    return retriever
+    # return vectorstore_dir_path
+    # retriever = vectorstore.as_retriever(search_type="mmr",search_kwargs={"k":num_results})
+    # print("Retriever Created..")
+    return vectorstore_dir_path
 
 
 
